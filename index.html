@@ -49,7 +49,7 @@ body.novi .qvi{display:none}
   </div>
  </div>
  <section id="app"></section>
- <div class="foot">🔒 Your plan, progress and voice recordings are saved <b>only in this browser on this device</b> – nothing is sent to any server.<br>
+ <div class="foot">🔒 Your plan, progress and voice recordings are saved <b>only in this browser on this device</b> – they are never uploaded. (Unknown words you hover are looked up online; speech recognition uses your browser’s online service.)<br>
   Changing device or browser? Use ⬇ to download a backup and ⬆ to restore it. Clearing browser data deletes your progress.<br>
   <a href="#" id="bReset">Start over</a></div>
 </div>
@@ -1128,7 +1128,7 @@ const PLACE=[['I ___ a teacher.',['am','is','are'],0],['She ___ in a bank.',['wo
  ['Yesterday I ___ to the office.',['go','went','gone'],1],['I’m going ___ call you tomorrow.',['to','for','at'],0],['“interest rate” =',['lãi suất','tỷ giá','số dư'],0],
  ['“Could you say that again?” =',['Bạn nói lại được không?','Bạn đi đâu vậy?','Bạn khỏe không?'],0],['“Sales rose sharply.” =',['Doanh số tăng mạnh','Doanh số giảm nhẹ','Doanh số ổn định'],0]];
 
-let H=null,EL=null,UI={sid:null,step:0};
+let H=null,EL=null,UI={sid:null,step:0,sec:(()=>{try{return localStorage.getItem('qp.sec')||'today'}catch(e){return 'today'}})()};
 const P=()=>H.st();
 /* ---------- the sessions in study order ---------- */
 /* one fixed mixed order for everybody (user 2026-11-23): foundation bootcamp first, then topics with people development early */
@@ -1203,7 +1203,7 @@ function tmToggle(){TM.run=!TM.run;clearInterval(TM.h);if(TM.run)TM.h=setInterva
 function render(){if(!EL)return;build();const p=P();srsSeed();
  if(!p.setup||UI.edit){EL.innerHTML=setupView();return}
  if(!UI.sid)UI.sid=nextS().id;{const s0=byId(UI.sid);if(s0&&s0.L&&s0.L.gid&&UI.gsel!==s0.L.gid){UI.gsel=s0.L.gid;UI.glv=null;UI.gq=UI.gb=null;UI.gti=0}}
- EL.innerHTML=heroView()+navView()+`<div class="qgrid"><div class="qmain" id="qpLes">${lessonView()}</div><div class="qside">${weekView()}${testsCard()}${checkView()}</div></div>`+gramView()+vocView()+mapView()+libView();
+ EL.innerHTML=heroView()+navView()+`<div class="qsec">${secView()}</div>`;   /* one section at a time (user 2026-11-23: tidy layout) */
  tmDraw();afterLesson()}
 
 function setupView(){const s=P().setup||{},days=s.days||[1,2,3,4,5,6],today=ymd(new Date());
@@ -1294,15 +1294,17 @@ function ring(p,c){const r=46,C=2*Math.PI*r;return `<svg viewBox="0 0 110 110" c
 function heroView(){const c=counts(),N=SESS.length,nx=nextS(),W=nx.W,M=D.months[nx.m-1]||{},eb=expectedBefore(),dnToday=Object.values(P().done||{}).includes(ymd(new Date()));
  let stat,cls;if(c.all>=N){stat='🏆 Plan complete!';cls='ok'}else if(c.done<eb){stat=`Behind by ${eb-c.done} session${eb-c.done>1?'s':''} – one at a time is fine`;cls='bad'}
  else if(dnToday||c.done>eb){stat=c.done>eb+(todayStudy()?1:0)?'🚀 Ahead of plan':'✅ On track – today is done';cls='ok'}else{stat=todayStudy()?'⏳ On track · today’s 30 min is waiting':'😌 Rest day – review if you like';cls='mid'}
- const fin=plannedDate(N-1-c.skip);const wk=SESS.indexOf(nx)<0?12:nx.wi+1;
- return `<div class="qhero"><div class="qh1">${ring(c.all/N,'#E1E622')}<div class="qhn"><b>${Math.round(c.all/N*100)}%</b><span>${c.all}/${N}</span></div></div>
+ const fin=plannedDate(N-1-c.skip),wk=SESS.indexOf(nx)<0?NW:nx.wi+1,due=srsDue().length;
+ const kpi=(i,v,l,lv,x)=>`<div class="qkpi${x?' '+x:''}"><i>${i}</i><div><b>${v}</b><span>${l}</span>${vi(lv)}</div></div>`;
+ return `<div class="qhero">
+ <div class="qh1">${ring(c.all/N,'#E1E622')}<div class="qhn"><b>${Math.round(c.all/N*100)}%</b><span>${c.all}/${N}</span></div></div>
  <div class="qh2"><div class="qhk">Week ${wk} of ${NW} · Month ${nx.m}: ${esc(M.t||'')}</div><h2>${greet()}</h2>
-  <div class="qtoday">${dnToday?'✅ Done today – next up':'📌 Today'}: <b>${esc(nx.type==='rev'?'Weekly review – '+W.t:nx.L.t)}</b>${srsDue().length?' <span class="qdue">· 🔁 '+srsDue().length+' to review</span>':''}${vi((dnToday?'Hôm nay đã học xong – bài tiếp theo: ':'Hôm nay: ')+(nx.type==='rev'?'Ôn tập tuần – '+W.v:nx.L.v))}</div>
-  <div class="qhs ${cls}">${stat}</div>${vi(cls==='bad'?'Đang chậm so với kế hoạch – cứ học từng buổi một':cls==='ok'?'Đúng tiến độ – rất tốt!':'Đúng tiến độ – 30 phút hôm nay đang chờ bạn')}${P().setup.why?`<div class="qwhy">“${esc(P().setup.why)}”</div>`:''}</div>
- <div class="qh3"><div class="qkpi"><b>🔥 ${streak()}</b><span>day streak</span>${vi('ngày liên tục')}</div><div class="qkpi"><b>⏱ ${minsWeek()}</b><span>min this week</span>${vi('phút tuần này')}</div><div class="qkpi kw"><b>📘 ${known()}</b><span>words known</span>${vi('từ đã thuộc')}</div><div class="qkpi"><b>🎯 ${fin?fin.toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'–'}</b><span>finish date</span>${vi('ngày hoàn thành')}</div>
-  <div class="qhb"><button class="pri big" data-a="open" data-s="${nx.id}">▶ ${dnToday?'Keep going':'Start today’s 30 min'}</button><button class="ghost" data-a="edit">⚙ My plan</button><button class="ghost" data-a="restart">↺ Restart</button></div></div>
+  <div class="qtoday">${dnToday?'✅ Done today – next up':'📌 Today'}: <b>${esc(nx.type==='rev'?'Weekly review – '+W.t:nx.L.t)}</b>${due?` <span class="qdue">· 🔁 ${due} to review</span>`:''}${vi((dnToday?'Hôm nay đã học xong – bài tiếp theo: ':'Hôm nay: ')+(nx.type==='rev'?'Ôn tập tuần – '+W.v:nx.L.v))}</div>
+  <div class="qhsr"><span class="qhs ${cls}">${stat}</span>${P().setup.why?`<span class="qwhy">“${esc(P().setup.why)}”</span>`:''}</div>${vi(cls==='bad'?'Đang chậm so với kế hoạch – cứ học từng buổi một':cls==='ok'?'Đúng tiến độ – rất tốt!':'Đúng tiến độ – 30 phút hôm nay đang chờ bạn')}</div>
+ <div class="qh3">${kpi('🔥',streak(),'day streak','ngày liên tục')}${kpi('⏱',minsWeek(),'min this week','phút tuần này')}${kpi('📘',known(),'words known','từ đã thuộc','kw')}${kpi('🎯',fin?fin.toLocaleDateString('en-GB',{day:'numeric',month:'short'}):'–','finish date','ngày hoàn thành')}</div>
+ <div class="qhb"><button class="pri big" data-a="open" data-s="${nx.id}">▶ ${dnToday?'Keep going':'Start today’s 30 min'}</button><span class="sp"></span>
+  <div class="qhact"><button data-a="edit">⚙ My plan</button><button data-a="howto">ℹ️ How it works</button><button data-a="restart">↺ Restart</button></div></div>
  ${quoteView()}<div class="qmonths">${D.months.map(m=>{const ss=SESS.filter(s=>s.m===m.n),d=ss.filter(isDone).length;return `<div class="qmo" style="--mc:${m.c}"><div class="qmt"><b>Month ${m.n}</b> ${esc(m.t)}<span>${d}/${ss.length}</span></div><div class="qmb"><i style="width:${ss.length?d/ss.length*100:0}%"></i></div></div>`}).join('')}</div></div>`}
-
 function weekView(){let cur=byId(UI.sid)||nextS();if(cur.lib)cur=nextS();const W=cur.W,bp=bonusPick(),ss=SESS.filter(s=>s.W===W),nx=nextS();
  return `<div class="qcard"><div class="qct">📅 Week ${cur.wi+1} of ${NW} · ${esc(W.t)}</div><div class="qcv">${esc(W.v)}</div><div class="qwk">${ss.map((s,i)=>{const d=pDate(s),dn=(P().done||{})[s.id];
   return `<button class="qwd${dn?' done':''}${s===nx?' next':''}${s.id===UI.sid?' sel':''}" data-a="open" data-s="${s.id}"><small>${d?WD[d.getDay()]+' '+d.getDate():'Day '+(i+1)}</small><i>${dn==='skip'?'✓':dn?'✓':s.type==='rev'?'⭐':s.type==='test'?'📝':i+1}</i><span>${esc(s.type==='rev'?'Review':s.L.t)}</span>${vi(s.type==='rev'?'Ôn tập':s.L.v)}</button>`}).join('')}</div>${bp?`<button class="qbonus" data-a="open" data-s="${bp.id}" style="--lc:${bp.lib.c}"><i>${bp.lib.i}</i><span><small>➕ Bonus of the week · ${esc(bp.lib.t)}</small><b>${esc(bp.L.t)}</b></span></button>`:''}</div>`}
@@ -1329,7 +1331,7 @@ function lessonView(){const s=byId(UI.sid)||nextS(),steps=stepsOf(s),a=stArr(s),
  return `<div class="qles"><div class="qlh"><div><div class="qhk">${s.L&&s.L.boot?'🧱 Foundation bootcamp · ':''}${s.lib?`${s.lib.i} Bonus · ${esc(s.lib.t)} · lesson ${s.li+1}/${s.lib.L.length}`:`Week ${s.wi+1} · ${s.type==='rev'?'Review day':s.type==='test'?'Month test (CEFR)':'Lesson '+(s.li+1)+'/5'}`}${d&&!s.lib?' · planned '+d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}):''}${dn?` · <span class="qdn">✓ ${dn==='skip'?'known':'done '+dn}</span>`:''}</div>
   <h3>${esc(head.t)}</h3>${vi(head.v)}<div class="qgoal">🎯 <b>Goal:</b> ${esc(head.g)}${vi(head.gv)}</div></div>
   <button class="qtm" id="qpT" data-a="timer"><i>▶</i><b>30:00</b><span>focus timer</span></button></div>
- <div class="qsteps">${steps.map((x,j)=>`<button class="qst${j===i?' on':''}${a[j]?' ok':''}" style="--sc:${x.c}" data-a="step" data-i="${j}"><i>${a[j]?'✓':x.i}</i><b>${esc(x.t)}</b>${vi(x.v)}<small>${x.min} min</small></button>`).join('')}</div>
+ <div class="qsteps" style="grid-template-columns:repeat(${steps.length},minmax(0,1fr))">${steps.map((x,j)=>`<button class="qst${j===i?' on':''}${a[j]?' ok':''}" style="--sc:${x.c}" data-a="step" data-i="${j}"><i>${a[j]?'✓':x.i}</i><b>${esc(x.t)}</b>${vi(x.v)}<small>${x.min} min</small></button>`).join('')}</div>
  <div class="qbody" style="--sc:${St.c}"><div class="qbt"><b>${St.i} ${esc(St.t)}</b> <span class="qmut">· ${esc(St.v)} · ${St.min} min</span></div>${stepBody(s,St.k)}
   <div class="qnav">${i>0?`<button class="ghost" data-a="step" data-i="${i-1}">← Back</button>`:''}<span class="sp"></span>${a[i]?'<span class="qdn">✓ step done</span>':`<button class="sec" data-a="sdone" data-i="${i}">✓ Step done${i<steps.length-1?' → next':''}</button>`}
   ${i===steps.length-1||steps.every((_,j)=>a[j])?`<button class="pri" data-a="complete">${dn&&dn!=='skip'?'✓ Completed again':'🎉 Complete the lesson'}</button>`:''}</div></div></div>`}
@@ -1390,11 +1392,11 @@ function afterLesson(){const s=byId(UI.sid);if(!s)return;const ta=document.getEl
 function relesson(){const e=document.getElementById('qpLes');if(e){e.innerHTML=lessonView();tmDraw();afterLesson()}}
 
 /* ================= actions ================= */
-function open(id){UI.sid=id;UI.step=0;UI.sr=null;UI.wq=UI.b=UI.rq=UI.rd=null;UI.flip={};UI.show={};UI.role=false;const s=byId(id),a=s?stArr(s):[];
+function open(id){UI.sid=id;UI.step=0;UI.sr=null;UI.sec='today';UI.wq=UI.b=UI.rq=UI.rd=null;UI.flip={};UI.show={};UI.role=false;const s=byId(id),a=s?stArr(s):[];
  if(s&&s.L&&s.L.gid&&GR[s.L.gid]){UI.gsel=s.L.gid;UI.glv=GR[s.L.gid].lv;UI.gq=UI.gb=null;UI.gti=0}   /* bootcamp: its grammar point drives the practice */const f=s?stepsOf(s).findIndex((_,j)=>!a[j]):0;UI.step=f<0?0:f;render();
  const l=document.getElementById('qpLes');if(l)l.scrollIntoView({behavior:'smooth',block:'start'})}
 function act(a,b){const s=byId(UI.sid),p=P(),d=b?b.dataset:{};
- if(GACT[a])return GACT[a](b,d);if(TACT[a])return TACT[a](b,d);
+ if(GACT[a])return GACT[a](b,d);if(TACT[a])return TACT[a](b,d);if(a==='howto')return howOpen();
  switch(a){
  case 'day':case 'like':{b.classList.toggle('on');return}
  case 'libc':UI.libc=d.k;{const e=EL.querySelector('.qlib');if(e)e.outerHTML=libView()}return;
@@ -1417,7 +1419,7 @@ function act(a,b){const s=byId(UI.sid),p=P(),d=b?b.dataset:{};
  case 'timer':return tmToggle();
  case 'qnext':{UI.qo=(UI.qo||0)+1;const e=EL.querySelector('.qquote');if(e)e.outerHTML=quoteView();return}
  case 'can':{p.can=p.can||{};p.can[d.k]=!p.can[d.k];H.save();b.classList.toggle('on');b.querySelector('i').textContent=p.can[d.k]?'✓':'';return}
- case 'rate':{p.rate=p.rate||{};const k='w'+s.W.n,r=p.rate[k]=p.rate[k]||[0,0];r[+d.j]=+d.v;H.save();relesson();const c=EL.querySelector('.qside');if(c)c.innerHTML=weekView()+testsCard()+checkView();return}
+ case 'rate':{p.rate=p.rate||{};const k='w'+s.W.n,r=p.rate[k]=p.rate[k]||[0,0];r[+d.j]=+d.v;H.save();relesson();const c=EL.querySelector('.qside');if(c)c.innerHTML=weekView();return}
  case 'say':return H.speak(d.t,d.w);
  case 'playw':return speakSeq(s.L.w.map(w=>['A',w[0]]));
  case 'flip':{UI.flip=UI.flip||{};UI.flip[+d.i]=!UI.flip[+d.i];b.classList.toggle('fl');return}
@@ -1457,7 +1459,15 @@ const gramFor=s=>{if(!s||s.lib||s.type==='rev')return null;if(s.L&&s.L.gid)retur
 const coreFor=s=>{if(!s||s.lib||s.type==='test')return [];const a=(D.vocab||[]).find(x=>x.n===s.W.n),b=(D.vocab2||[]).find(x=>x.wk===s.W.n),ws=(a?a.w:[]).concat(b?b.w:[]);if(!ws.length)return [];const per=Math.ceil(ws.length/5);return s.type==='rev'?ws:ws.slice(s.li*per,s.li*per+per)};
 const known=()=>Object.keys(P().kw||{}).length;
 const gDone=id=>!!(P().gdone||{})[id];
-function navView(){return `<div class="qjump">${[['.qles','📅','Today’s lesson'],['.qgram','🧩','Grammar'],['.qvoc','📘','Core words'],['.qmap','🗺️','Roadmap'],['.qlib','📚','Life & small talk']].map(([t,i,n])=>`<button data-a="jump" data-t="${t}"><i>${i}</i>${n}</button>`).join('')}</div>`}
+/* section tabs under the hero: Today · Grammar · Core words · Roadmap · Life & small talk · Progress */
+const SECS=[['today','📅','Today','Hôm nay'],['grammar','🧩','Grammar','Ngữ pháp'],['words','📘','Core words','Từ vựng'],['road','🗺️','Roadmap','Lộ trình'],['lib','📚','Life & small talk','Đời sống'],['prog','📈','Progress','Tiến độ']];
+function secCount(k){if(k==='grammar')return GRAM.filter(g=>gDone(g.id)).length+'/'+GRAM.length;if(k==='words'){const n=(D.vocab||[]).concat(D.vocab2||[]).reduce((a,v)=>a+v.w.length,0);return known()+'/'+n}
+ if(k==='road'){const c=counts();return c.all+'/'+SESS.length}if(k==='lib')return LIBS.filter(isDone).length+'/'+LIBS.length;if(k==='today'){const n=srsDue().length;return n?'🔁 '+n:''}return ''}
+function navView(){const cur=UI.sec||'today';return `<div class="qjump" role="tablist">${SECS.map(([k,i,n,v])=>{const c=secCount(k);return `<button role="tab" class="${k===cur?'on':''}" data-a="sec" data-k="${k}"><i>${i}</i><span>${n}${vi(v)}</span>${c?`<em>${c}</em>`:''}</button>`}).join('')}</div>`}
+function secView(){switch(UI.sec||'today'){
+ case 'grammar':return gramView();case 'words':return vocView();case 'road':return mapView();case 'lib':return libView();
+ case 'prog':return `<div class="qprog"><div>${testsCard()||`<div class="qcard"><div class="qct">🏅 Monthly tests${vi('Bài kiểm tra tháng')}</div><div class="qcv">Your scores appear here after the first monthly test.${vi('Điểm sẽ hiện ở đây sau bài kiểm tra tháng đầu tiên.')}</div></div>`}</div>${checkView()}</div>`;
+ default:return `<div class="qgrid"><div class="qmain" id="qpLes">${lessonView()}</div><div class="qside">${weekView()}</div></div>`}}
 /* the grammar card shown in the lesson's “Grammar & pattern” step */
 function gramCard(G){if(!G)return '';return `<div class="qgc" style="--gl:${LVC[G.lv]}"><div class="qgch"><span class="qlv">${G.lv}</span><b>📖 Grammar point: ${esc(G.t)}</b><span class="qmut">· ${esc(G.v)}</span></div>
  <p class="qgd">${esc(G.d)}</p>${fTable(G)}${G.m&&G.m[0]?`<div class="qmis"><span class="x">❌ ${esc(G.m[0][0])}</span><span class="o">✅ ${esc(G.m[0][1])}</span><small>${esc(G.m[0][2])}</small></div>`:''}
@@ -1508,7 +1518,7 @@ function vocView(){const V=(D.vocab||[]).concat(D.vocab2||[]);if(!V.length)retur
  const q=UI.vq;
  return `<div class="qvoc"><div class="qghd"><div><div class="qct">📘 Core vocabulary · ${all} must-know words${vi(all+' từ vựng cốt lõi phải biết')}</div><div class="qcv">One set per week, from the top verbs to finance &amp; people development · ${known()}/${all} known</div></div>
   <div class="qrow" style="margin:0"><button class="ghost" data-a="vplay">▶ Play set</button><button class="${UI.vhide?'pri':'ghost'}" data-a="vhide">🙈 Hide meanings</button><button class="sec" data-a="vquiz">⚡ Quiz this set</button></div></div>
- <div class="qvsets">${V.map(v=>{const k=v.w.filter(w=>kw[w[0]]).length;return `<button class="${v===set?'on':''}" data-a="vset" data-n="${v.n}"><b>${v.wk?'W'+v.wk+'+':typeof v.n==='number'?'W'+v.n:'★'}</b> ${esc(v.t)}<i style="width:${k/v.w.length*100}%"></i><small>${k}/${v.w.length}</small></button>`}).join('')}</div>
+ <div class="qvgroups">${[['Weekly core','Từ cốt lõi theo tuần',V.filter(v=>typeof v.n==='number')],['Weekly extra','Từ mở rộng theo tuần',V.filter(v=>v.wk)],['Word bank','Ngân hàng từ – học bất cứ lúc nào',V.filter(v=>typeof v.n!=='number'&&!v.wk)]].filter(g=>g[2].length).map(([n,nv,L])=>`<div class="qvg"><div class="qvgl">${n}${vi(nv)}</div><div class="qvsets">${L.map(v=>{const k=v.w.filter(w=>kw[w[0]]).length;return `<button class="${v===set?'on':''}${k===v.w.length?' full':''}" data-a="vset" data-n="${v.n}">${typeof v.n==='number'||v.wk?`<b>W${v.wk||v.n}</b>`:''}${esc(v.t)}<small>${k}/${v.w.length}</small><i style="width:${k/v.w.length*100}%"></i></button>`}).join('')}</div></div>`).join('')}</div>
  ${q?`<div class="qquiz">${q.map((x,j)=>`<div class="qqq"><b>${esc(x.q)}</b><div>${x.o.map((o,m)=>`<button class="qqo${x.a!=null?(m===x.c?' r':m===x.a?' w':''):''}" data-a="vqa" data-i="${j}" data-m="${m}">${esc(o)}</button>`).join('')}</div></div>`).join('')}
   ${q.every(x=>x.a!=null)?`<div class="qres">${q.filter(x=>x.a===x.c).length}/${q.length} correct · words you got right are ticked as known <button class="ghost" data-a="vquiz">🔁 New quiz</button> <button class="ghost" data-a="vqx">Close</button></div>`:''}</div>`:''}
  <div class="qvgrid${UI.vhide?' hide':''}">${set.w.map(w=>`<div class="${kw[w[0]]?'kn':''}" data-a="vrev">${spk(w[0])}<span><b>${esc(w[0])}</b><code>${esc(w[1])}</code><em>${esc(w[2])}</em></span><button class="qkw" data-a="kw" data-w="${esc(w[0])}" aria-label="I know this word">${kw[w[0]]?'✓':'+'}</button></div>`).join('')}</div></div>`}
@@ -1517,11 +1527,11 @@ const reg=()=>{const e=EL.querySelector('.qgram');if(e)e.outerHTML=gramView();co
 const inBox=(b,sel)=>((b&&b.closest&&b.closest('.qgpr,.qbody'))||document).querySelector(sel);
 const rev=()=>{const e=EL.querySelector('.qvoc');if(e)e.outerHTML=vocView()};
 const GACT={
- jump(b,d){const e=EL.querySelector(d.t);if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},
+ sec(b,d){UI.sec=d.k;try{localStorage.setItem('qp.sec',d.k)}catch(e){}render();const j=EL.querySelector('.qjump');if(j&&j.getBoundingClientRect().top<0)j.scrollIntoView({behavior:'smooth',block:'start'})},
  tmap(){UI.tmap=!UI.tmap;reg()},
  glv(b,d){UI.glv=d.l;const f=GRAM.find(g=>g.lv===d.l);if(f){UI.gsel=f.id;UI.gq=UI.gb=null;UI.gti=0}reg()},
  gsel(b,d){UI.gsel=d.g;UI.gq=UI.gb=null;UI.gti=0;UI.gtab='q';reg();const e=EL.querySelector('.qgdet');if(e&&innerWidth<980)e.scrollIntoView({behavior:'smooth'})},
- gopen(b,d){const G=GR[d.g];if(!G)return;UI.gsel=G.id;UI.glv=G.lv;UI.gq=UI.gb=null;UI.gti=0;UI.gtab='q';reg();const e=EL.querySelector('.qgram');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},
+ gopen(b,d){const G=GR[d.g];if(!G)return;UI.gsel=G.id;UI.glv=G.lv;UI.gq=UI.gb=null;UI.gti=0;UI.gtab='q';UI.sec='grammar';render();const e=EL.querySelector('.qjump');if(e)e.scrollIntoView({behavior:'smooth',block:'start'})},
  gtab(b,d){UI.gtab=d.k;reg()},
  gqa(b,d){UI.gq=UI.gq||{};if(UI.gq[d.i]!=null)return;UI.gq[d.i]=+d.m;const G=GR[UI.gsel]||GRAM[0],x=G.q[+d.i];if(+d.m===x[2])H.speak(x[0].replace('___',x[1][x[2]]),'A');reg()},
  gqr(){UI.gq={};reg()},
@@ -1548,9 +1558,15 @@ const GACT={
  vqx(){UI.vq=null;rev()}};
 
 const CSS2=`
-.qjump{display:flex;gap:6px;flex-wrap:wrap;position:sticky;top:6px;z-index:5;background:color-mix(in srgb,var(--bg) 85%,transparent);backdrop-filter:blur(8px);padding:4px;border-radius:999px;align-self:flex-start}
-.qjump button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:6px 13px;font:inherit;font-size:12.5px;font-weight:700;display:inline-flex;gap:6px;align-items:center}
-.qjump button:hover{border-color:var(--ink)}.qjump i{font-style:normal}
+.qjump{display:flex;gap:4px;flex-wrap:wrap;position:sticky;top:6px;z-index:5;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(8px);padding:5px;border-radius:16px;border:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.06)}
+.qjump button{flex:1 1 auto;min-width:0;white-space:nowrap;border:0;background:none;color:var(--ink);border-radius:12px;padding:8px 12px;font:inherit;font-size:13px;font-weight:700;display:flex;gap:8px;align-items:center;justify-content:center;cursor:pointer;text-align:left}
+.qjump button:hover{background:var(--bg)}.qjump i{font-style:normal;font-size:16px}.qjump span .qvi{font-size:10.5px;font-weight:600}
+.qjump em{font-style:normal;font-size:11px;font-weight:800;background:var(--bg);color:var(--mut);border-radius:999px;padding:1px 8px;margin-left:2px}
+.qjump button.on{background:#111;color:#E1E622}.qjump button.on em{background:rgba(225,230,34,.2);color:#E1E622}.qjump button.on .qvi{color:#cbd5e1}
+.qsec{display:flex;flex-direction:column;gap:14px;animation:qsecIn .25s ease}
+@keyframes qsecIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.qprog{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;align-items:start}.qprog>div{display:flex;flex-direction:column;gap:14px}
+@media (max-width:760px){.qsteps{grid-template-columns:repeat(auto-fit,minmax(96px,1fr))!important}.qjump button{min-width:0;flex-basis:30%}}
 .qgram,.qvoc{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px 18px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 8px 22px rgba(0,0,0,.05);scroll-margin-top:60px}
 .qles,.qmap,.qlib{scroll-margin-top:60px}
 .qghd{display:flex;gap:12px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}
@@ -1655,7 +1671,7 @@ const CSS3=`
 .qst .qvi{font-size:10.5px;text-align:center;line-height:1.2}
 .qwd .qvi{font-size:10px;text-align:center;line-height:1.2;margin-top:1px}
 .qkpi .qvi{font-size:10.5px;margin-top:1px}
-.qhs+.qvi{margin-top:4px;font-size:12px}
+.qhsr+.qvi{margin-top:4px;font-size:12px}
 .qck span{display:block;flex:1}.qcan>b .qvi{font-weight:500}
 .qf>span .qvi{font-weight:500;font-size:12px;margin-top:2px}
 body.novi .qp .qvi,body:not(.show-vi) #t-plan .qvi{display:none}
@@ -1762,6 +1778,106 @@ const CSS4=`
 .qtbars i,.qtrow i{display:block;height:10px;border-radius:6px;background:var(--bg);overflow:hidden}.qtbars em,.qtrow em{display:block;height:100%;border-radius:6px;background:#22c55e}
 .qtrow{display:grid;grid-template-columns:70px 1fr 42px;gap:8px;align-items:center;font-size:12.5px;margin-top:7px}.qtrow small{grid-column:2/-1;color:var(--mut);font-size:11px;margin-top:-4px}
 @media (max-width:980px){.qtres{grid-template-columns:1fr}}
+`;
+
+
+/* ℹ️ How it works (user 2026-11-23): the README in the app – a bilingual guide in a pop-up */
+const HOWTO=[
+ ['🗺️','Your roadmap','Lộ trình của bạn',[
+  ['14 weeks · 87 sessions of 30 minutes. It starts with a 2-week grammar & vocabulary bootcamp, so you can build correct sentences first.','14 tuần · 87 buổi, mỗi buổi 30 phút. Bắt đầu bằng 2 tuần nền tảng ngữ pháp & từ vựng để đặt câu đúng.'],
+  ['Then 12 topic weeks: everyday talk, people development (first) and finance & banking, mixed together.','Sau đó là 12 tuần chủ đề: giao tiếp hằng ngày, phát triển con người (ưu tiên) và tài chính – ngân hàng, xen kẽ nhau.'],
+  ['Each week = 5 lessons + 1 weekly review. Each month ends with a test.','Mỗi tuần = 5 bài + 1 buổi ôn tập. Cuối mỗi tháng có 1 bài kiểm tra.']]],
+ ['⏱','One session = 30 minutes','Một buổi = 30 phút',[
+  ['Press “Start today’s 30 min”, then the ▶ focus timer. Do the steps from left to right and press “Step done”.','Bấm “Start today’s 30 min”, rồi bật đồng hồ ▶. Làm các bước từ trái sang phải và bấm “Step done”.'],
+  ['🔁 Review → 🎵 Warm-up & sounds → 📘 Words → 🧩 Grammar & pattern → 🎭 Dialogue (role-play) → 🎤 Speak it.','🔁 Ôn tập → 🎵 Khởi động & phát âm → 📘 Từ vựng → 🧩 Ngữ pháp & mẫu câu → 🎭 Hội thoại (nhập vai) → 🎤 Nói.'],
+  ['Finish with “Complete the lesson”. Missed a day? No problem – the plan simply continues from where you are.','Kết thúc bằng “Complete the lesson”. Lỡ một ngày cũng không sao – lộ trình tiếp tục từ chỗ bạn đang học.']]],
+ ['🔁','Spaced review','Ôn tập ngắt quãng',[
+  ['Words and sentences you learned come back after 1, 3, 7, 14 and 30 days. A mistake brings them back tomorrow.','Từ và câu đã học sẽ quay lại sau 1, 3, 7, 14 và 30 ngày. Trả lời sai thì ngày mai sẽ gặp lại.']]],
+ ['🧩','Grammar & 📘 core words','Ngữ pháp & từ vựng cốt lõi',[
+  ['32 grammar lessons from A1 to B2, explained in Vietnamese, with a 🕒 Tense map. Practise: Choose · Build · Translate · Your turn.','32 bài ngữ pháp từ A1 đến B2, giải thích bằng tiếng Việt, có 🕒 bản đồ các thì. Luyện tập: Chọn · Ghép câu · Dịch · Tự đặt câu.'],
+  ['About 1,300 words: 10 core words in every lesson plus a word bank. Tick ✓ the words you know; use 🙈 Hide meanings and ⚡ Quiz.','Khoảng 1.300 từ: 10 từ cốt lõi mỗi bài và ngân hàng từ. Đánh dấu ✓ từ đã thuộc; dùng 🙈 ẩn nghĩa và ⚡ kiểm tra.']]],
+ ['📚','Life & small talk','Đời sống & chuyện phiếm',[
+  ['40 bonus lessons in 8 topics (small talk, travel, food, health, home, free time, social life, the world). One is suggested every week – do any lesson, any day.','40 bài thêm trong 8 chủ đề. Mỗi tuần gợi ý 1 bài – học bài nào, ngày nào cũng được.']]],
+ ['📝','Monthly test','Bài kiểm tra tháng',[
+  ['Listening · vocabulary · grammar · sentence building · speaking. You get a score, an estimated CEFR level (target A1 → A2) and what to work on. It is an estimate, not a certificate.','Nghe · từ vựng · ngữ pháp · ghép câu · nói. Bạn nhận điểm, mức CEFR ước tính (mục tiêu A1 → A2) và gợi ý cần cải thiện. Đây là ước tính, không phải chứng chỉ.']]],
+ ['🖱️','Helpful tools','Công cụ hỗ trợ',[
+  ['Rest the mouse on any English word to see its Vietnamese meaning and IPA. 🔊 reads aloud; 🎤 checks what you say; ⏺ records your voice.','Dừng chuột trên từ tiếng Anh bất kỳ để xem nghĩa tiếng Việt và phiên âm. 🔊 đọc to; 🎤 kiểm tra câu bạn nói; ⏺ ghi âm giọng của bạn.'],
+  ['Vietnamese notes: the VI button (or “Show Vietnamese”) shows or hides them. Voice and speed can be changed at the top.','Chú thích tiếng Việt: bật / tắt bằng nút VI (hoặc “Show Vietnamese”). Giọng đọc và tốc độ chỉnh ở phía trên.'],
+  ['Use Chrome or Edge, allow the microphone the first time; speech recognition needs internet.','Dùng Chrome hoặc Edge, cho phép micro lần đầu; nhận dạng giọng nói cần có mạng.']]],
+ ['💾','Your data','Dữ liệu của bạn',[
+  ['Your plan, progress and recordings are saved only in this browser on this device – they are never uploaded. Clearing browser data deletes them.','Kế hoạch, tiến độ và ghi âm chỉ lưu trong trình duyệt trên máy này – không tải lên đâu cả. Xóa dữ liệu trình duyệt sẽ mất tiến độ.'],
+  ['Online: a word that is not in the built-in dictionary is looked up with an online translation service; speech recognition uses the browser’s online service.','Cần mạng: từ không có trong từ điển sẵn sẽ được tra bằng dịch vụ dịch online; nhận dạng giọng nói dùng dịch vụ online của trình duyệt.'],
+  ['⚙ My plan changes your name, goal, days and topics. ↺ Restart starts the whole plan again from Day 1 (your settings are kept).','⚙ My plan để đổi tên, mục tiêu, ngày học và chủ đề. ↺ Restart học lại từ đầu (giữ thông tin cá nhân).']]]];
+function howOpen(){let m=document.getElementById('qpHow');if(m)m.remove();m=document.createElement('div');m.id='qpHow';
+ m.innerHTML=`<div class="qhw" role="dialog" aria-label="How it works"><div class="qhwh"><div><b>ℹ️ How it works</b><span>Cách học với lộ trình này</span></div><button class="qhwx" aria-label="Close">✕</button></div>
+  <div class="qhwb">${HOWTO.map(s=>`<section><h4><i>${s[0]}</i>${esc(s[1])}<span>${esc(s[2])}</span></h4>${s[3].map(l=>`<p>${esc(l[0])}<em>${esc(l[1])}</em></p>`).join('')}</section>`).join('')}</div>
+  <div class="qhwf"><button class="pri" data-hw="go">▶ Start learning</button></div></div>`;
+ document.body.appendChild(m);const close=()=>{m.remove();removeEventListener('keydown',esck)},esck=e=>{if(e.key==='Escape')close()};addEventListener('keydown',esck);
+ m.addEventListener('click',e=>{if(e.target===m||e.target.closest('.qhwx'))close();else if(e.target.closest('[data-hw=go]')){close();UI.sec='today';render();const l=EL.querySelector('.qles');if(l)l.scrollIntoView({behavior:'smooth',block:'start'})}});
+ requestAnimationFrame(()=>m.classList.add('on'))}
+const CSS5=`
+#qpHow{position:fixed;inset:0;z-index:9998;background:rgba(5,10,25,.5);display:grid;place-items:center;padding:20px;opacity:0;transition:opacity .2s}
+#qpHow.on{opacity:1}
+.qhw{width:min(860px,100%);max-height:calc(100vh - 40px);display:flex;flex-direction:column;background:var(--surface,#fff);color:var(--ink,#111);border-radius:20px;box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden;transform:translateY(10px);transition:transform .25s}
+#qpHow.on .qhw{transform:none}
+.qhwh{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;color:#eef2ff;background:radial-gradient(120% 140% at 0% 0%,#1d3b72 0%,#0f1f3f 60%,#0a1428 100%)}
+.qhwh b{display:block;font-size:19px;color:#fff}.qhwh span{font-size:13px;color:#cbd5e1}
+.qhwx{border:0;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;font-size:15px;cursor:pointer}.qhwx:hover{background:rgba(255,255,255,.22)}
+.qhwb{overflow:auto;padding:6px 20px 10px;display:grid;grid-template-columns:1fr 1fr;gap:4px 22px}
+.qhwb section{padding:12px 0;border-bottom:1px solid var(--line,#e5e7eb)}
+.qhwb h4{margin:0 0 6px;font-size:14.5px;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}.qhwb h4 i{font-style:normal}.qhwb h4 span{font-size:12px;font-weight:600;color:var(--mut,#6b7280)}
+.qhwb p{margin:0 0 7px;font-size:13px;line-height:1.5}.qhwb p em{display:block;font-style:italic;color:var(--mut,#6b7280);font-size:12.5px;margin-top:1px}
+.qhwf{display:flex;justify-content:flex-end;padding:12px 20px;border-top:1px solid var(--line,#e5e7eb)}
+@media (max-width:760px){.qhwb{grid-template-columns:1fr}}
+`;
+
+
+/* polish (user 2026-11-23): one card style everywhere, a calmer hero with a clear layout */
+const CSS6=`
+.qp{gap:16px}
+.qcard,.qles,.qmap,.qsetup,.qlib,.qgram,.qvoc{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.12)}
+.qsetup{padding:0}
+.qct{font-size:12.5px;letter-spacing:.07em;color:var(--ink)}.qcv{margin-bottom:12px}
+/* hero: ring | greeting | KPIs 2×2 · actions · quote · months */
+.qhero{grid-template-columns:120px minmax(0,1fr) 300px;gap:16px 24px;padding:22px 26px 20px;border-radius:22px}
+.qh1{width:116px;height:116px}.qring{width:116px;height:116px}
+.qh2 h2{font-size:28px;margin:4px 0 6px}
+.qtoday{margin:0 0 10px}
+.qhsr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}.qhsr .qwhy{margin:0;border-left:3px solid #E1E622;padding-left:10px;font-size:13.5px;font-style:italic;opacity:.9}
+.qh3{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-self:stretch;align-content:center}
+.qkpi{display:flex;align-items:center;gap:10px;min-width:0;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.09)}
+.qkpi>i{font-style:normal;font-size:18px;width:34px;height:34px;flex:none;border-radius:10px;display:grid;place-items:center;background:rgba(255,255,255,.08)}
+.qkpi b{display:block;font-size:18px;line-height:1.1;color:#fff}.qkpi>div{min-width:0}.qkpi .qvi{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10.5px}.qkpi span{display:block;font-size:11px;font-weight:700;opacity:.7;white-space:nowrap}
+.qhb{grid-column:1/-1;display:flex;align-items:center;gap:10px;margin:2px 0 0;padding-top:14px;border-top:1px solid rgba(255,255,255,.08)}
+.qhero .pri.big{padding:12px 22px;font-size:14.5px;box-shadow:0 8px 22px -8px rgba(225,230,34,.55)}
+.qhact{display:flex;gap:2px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:999px;padding:3px}
+.qhact button{border:0;background:none;color:#cbd5e1;font:inherit;font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:999px;cursor:pointer;white-space:nowrap}
+.qhact button:hover{background:rgba(255,255,255,.12);color:#fff}
+.qquote{padding:10px 16px}.qmonths{gap:16px}.qmt{font-size:12px}
+/* tabs */
+.qjump{top:8px;padding:6px;border-radius:18px}
+.qjump button{padding:9px 12px;border-radius:13px}
+/* today: lesson + week */
+.qgrid{grid-template-columns:minmax(0,1fr) 320px;gap:16px}
+.qles h3{font-size:24px}
+.qlh{padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:2px}
+.qsteps{margin:14px 0}
+.qbody{border-radius:16px;padding:16px 18px}
+.qwk{gap:8px}.qwd{border-radius:14px;min-height:88px}
+/* the host page's chip row belongs to the other tabs: hidden while My Plan is open */
+body.plan-on #chips{display:none}
+/* core words: sets in 3 labelled groups of compact one-line chips */
+.qvgroups{display:flex;flex-direction:column;gap:10px;margin:14px 0}
+.qvg{display:grid;grid-template-columns:150px minmax(0,1fr);gap:10px;align-items:start}
+.qvgl{font-size:11.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);padding-top:8px}.qvgl .qvi{text-transform:none;letter-spacing:0;font-weight:600}
+.qvsets{display:flex!important;flex-wrap:wrap;gap:6px;margin:0!important}
+.qvsets button{display:inline-flex!important;align-items:center;gap:7px;padding:6px 11px 7px!important;border-radius:999px!important;white-space:nowrap;font-size:12.5px!important}
+.qvsets button b{color:var(--mut);font-size:11px;margin:0!important}.qvsets button small{float:none!important;font-size:10.5px!important;background:var(--surface);border-radius:999px;padding:0 6px}
+.qvsets button i{left:10px!important;right:10px;bottom:2px!important;height:2px!important;border-radius:2px;max-width:calc(100% - 20px)}
+.qvsets button.full{border-color:#22c55e!important}
+@media (max-width:760px){.qvg{grid-template-columns:1fr}.qvgl{padding:0}}
+@media (max-width:1100px){.qhero{grid-template-columns:110px minmax(0,1fr)}.qh3{grid-column:1/-1;grid-template-columns:repeat(4,1fr)}}
+@media (max-width:760px){.qh3{grid-template-columns:1fr 1fr}.qhb{flex-wrap:wrap}.qhact{width:100%;justify-content:space-between}.qgrid{grid-template-columns:1fr}}
 `;
 
 /* ================= styles ================= */
@@ -1904,7 +2020,7 @@ const CSS=`
 @media (max-width:980px){.qgrid{grid-template-columns:1fr}.qhero{grid-template-columns:110px 1fr}.qh3{grid-column:1/-1}.qmapg,.qfoc,.qplace{grid-template-columns:1fr}.qf2{grid-template-columns:1fr}}
 `;
 
-window.QEPLAN={mount(el,h){H=h;EL=el;if(!document.getElementById('qpCss')){const st=document.createElement('style');st.id='qpCss';st.textContent=CSS+CSS2+CSS3+CSS4;document.head.appendChild(st)}
+window.QEPLAN={mount(el,h){H=h;EL=el;if(!document.getElementById('qpCss')){const st=document.createElement('style');st.id='qpCss';st.textContent=CSS+CSS2+CSS3+CSS4+CSS5+CSS6;document.head.appendChild(st)}
   el.classList.add('qp');if(!el._qp){el._qp=1;hdInit(el);setInterval(()=>{const g=el.querySelector('.qh2 h2');if(g)g.innerHTML=greet()},300000);   /* greeting follows the clock */el.addEventListener('click',e=>{const b=e.target.closest('[data-a]');if(!b||!el.contains(b))return;e.preventDefault();e.stopPropagation();act(b.dataset.a,b)})}
   render()},
  refresh(){render()},
